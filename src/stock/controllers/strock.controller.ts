@@ -7,9 +7,24 @@ import {
   Post,
   Put,
   Query,
+  UsePipes,
 } from '@nestjs/common';
+import { z } from 'zod';
 import { StockService } from '../services/stock.service.js';
-import type { IProduct } from '../schemas/models/product.interface.js';
+import { ZodValidationPipe } from '../../shared/pipe/zod-validation.pipe.js';
+
+const createStockSchema = z.object({
+  name: z.string(),
+  quantity: z.coerce.number(),
+  relationId: z.string(),
+});
+
+const updateStockSchema = z.object({
+  stock: z.coerce.number(),
+});
+
+type CreateStock = z.infer<typeof createStockSchema>;
+type UpdateStock = z.infer<typeof updateStockSchema>;
 
 @Controller('stock')
 export class StockController {
@@ -28,15 +43,16 @@ export class StockController {
     return this.stockService.getStock(productId);
   }
 
+  @UsePipes(new ZodValidationPipe(createStockSchema))
   @Post()
-  async createStock(@Body() product: IProduct) {
-    return this.stockService.createStock(product);
+  async createStock(@Body() { name, quantity, relationId }: CreateStock) {
+    return this.stockService.createStock({ name, quantity, relationId });
   }
 
   @Put(':productId')
   async updateStock(
     @Param('productId') productId: string,
-    @Body('stock') stock: number,
+    @Body(new ZodValidationPipe(updateStockSchema)) { stock }: UpdateStock,
   ) {
     return this.stockService.updateStock(productId, stock);
   }
